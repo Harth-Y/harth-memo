@@ -122,7 +122,7 @@ window.EXPERIENCE_STORE = {
       this.app = window.cloudbase.init({ env: this.envId });
       this.auth = this.app.auth();
       this.db = this.app.database();
-      this.user = await this.auth.getCurrentUser().catch(() => null);
+      await this.refreshUser();
       this.displayName = localStorage.getItem(this.userNameKey) || "";
       this.cloudReady = true;
     } catch (error) {
@@ -135,15 +135,35 @@ window.EXPERIENCE_STORE = {
     return Boolean(this.user && String(this.user.uid) === this.adminUid);
   },
 
+  async refreshUser() {
+    const currentUser = await this.auth.getCurrentUser().catch(() => null);
+    let detailUser = null;
+    if (this.auth.getUser) {
+      const result = await this.auth.getUser().catch(() => null);
+      detailUser = result?.data?.user || result?.user || null;
+    }
+    this.user = currentUser || detailUser ? { ...(currentUser || {}), ...(detailUser || {}) } : null;
+    return this.user;
+  },
+
   getUserProfile() {
     const name =
       this.user?.nickName ||
       this.user?.nickname ||
       this.user?.displayName ||
+      this.user?.name ||
       this.user?.username ||
       this.displayName ||
       "Harth";
-    const avatar = this.user?.avatarUrl || this.user?.avatar || "";
+    const avatar =
+      this.user?.avatarUrl ||
+      this.user?.avatar ||
+      this.user?.picture ||
+      this.user?.photoUrl ||
+      this.user?.photoURL ||
+      this.user?.metadata?.avatarUrl ||
+      this.user?.customData?.avatarUrl ||
+      "";
     return {
       name,
       avatar: typeof avatar === "string" && /^https?:\/\//.test(avatar) ? avatar : "",
@@ -162,7 +182,8 @@ window.EXPERIENCE_STORE = {
     } else {
       throw new Error("当前 CloudBase SDK 不支持账号密码登录接口。");
     }
-    this.user = loginState?.user || (await this.auth.getCurrentUser());
+    this.user = loginState?.user || null;
+    await this.refreshUser();
     if (!this.isAdmin()) {
       await this.logout();
       throw new Error("当前账号不是管理员账号。");
