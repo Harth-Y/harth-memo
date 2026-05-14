@@ -98,9 +98,92 @@ window.EXPERIENCE_POSTS = [
 ];
 
 window.EXPERIENCE_STORE = {
+  envId: "harth-memo-d6gdb1w0mc5a4c12f",
+  adminUid: "2054770578726895617",
   postsKey: "harth-memo-posts",
   draftsKey: "harth-memo-drafts",
   favoritesKey: "harth-memo-favorites",
+  app: null,
+  auth: null,
+  db: null,
+  user: null,
+  cloudReady: false,
+  cloudError: "",
+
+  async init() {
+    if (!window.cloudbase) {
+      this.cloudError = "CloudBase SDK 未加载，已使用本地模式。";
+      return;
+    }
+
+    try {
+      this.app = window.cloudbase.init({ env: this.envId });
+      this.auth = this.app.auth();
+      this.db = this.app.database();
+      this.user = await this.auth.getCurrentUser().catch(() => null);
+      this.cloudReady = true;
+    } catch (error) {
+      this.cloudReady = false;
+      this.cloudError = error?.message || "CloudBase 初始化失败，已使用本地模式。";
+    }
+  },
+
+  isAdmin() {
+    return Boolean(this.user && String(this.user.uid) === this.adminUid);
+  },
+
+  async login(username, password) {
+    if (!this.auth) throw new Error("CloudBase 尚未初始化");
+    let loginState = null;
+    if (this.auth.signInWithPassword) {
+      loginState = await this.auth.signInWithPassword({ username, password });
+    } else if (this.auth.signIn) {
+      loginState = await this.auth.signIn({ username, password });
+    } else if (this.auth.signInWithUsernameAndPassword) {
+      loginState = await this.auth.signInWithUsernameAndPassword(username, password);
+    } else {
+      throw new Error("当前 CloudBase SDK 不支持账号密码登录接口。");
+    }
+    this.user = loginState?.user || (await this.auth.getCurrentUser());
+    if (!this.isAdmin()) {
+      await this.logout();
+      throw new Error("当前账号不是管理员账号。");
+    }
+  },
+
+  async logout() {
+    if (this.auth?.signOut) await this.auth.signOut();
+    this.user = null;
+  },
+
+  normalizePost(doc) {
+    const id = doc.id || doc._id;
+    return {
+      ...doc,
+      id,
+      date: doc.date || doc.created_at || new Date().toISOString().slice(0, 10),
+      readTime: doc.readTime || doc.read_time || "1 分钟",
+      tags: Array.isArray(doc.tags) ? doc.tags : [],
+      takeaways: Array.isArray(doc.takeaways) ? doc.takeaways : [],
+      content: Array.isArray(doc.content) ? doc.content : [],
+      cloud: Boolean(doc.cloud),
+    };
+  },
+
+  toCloudDoc(item) {
+    return {
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      summary: item.summary,
+      tags: item.tags || [],
+      takeaways: item.takeaways || [],
+      content: item.content || [],
+      read_time: item.readTime || item.read_time || "1 分钟",
+      date: item.date || new Date().toISOString().slice(0, 10),
+      updated_at: new Date().toISOString(),
+    };
+  },
 
   readLocalPosts() {
     try {
@@ -114,21 +197,46 @@ window.EXPERIENCE_STORE = {
     localStorage.setItem(this.postsKey, JSON.stringify(posts));
   },
 
-  getPosts() {
+  async readCloudCollection(name) {
+    if (!this.cloudReady || !this.db) return null;
+    const result = await this.db.collection(name).orderBy("date", "desc").limit(1000).get();
+    return (result.data || []).map((doc) => this.normalizePost({ ...doc, cloud: true }));
+  },
+
+  async getPosts() {
+    try {
+      const cloudPosts = await this.readCloudCollection("posts");
+      if (cloudPosts) {
+        return [...cloudPosts, ...window.EXPERIENCE_POSTS].sort((a, b) => b.date.localeCompare(a.date));
+      }
+    } catch (error) {
+      this.cloudError = error?.message || "读取云端帖子失败，已使用本地模式。";
+    }
+
     return [...window.EXPERIENCE_POSTS, ...this.readLocalPosts()].sort((a, b) => b.date.localeCompare(a.date));
   },
 
-  addPost(post) {
+  async addPost(post) {
+    if (this.cloudReady && this.isAdmin()) {
+      await this.db.collection("posts").doc(post.id).set(this.toCloudDoc(post));
+      return;
+    }
+
     const localPosts = this.readLocalPosts();
     localPosts.unshift(post);
     this.saveLocalPosts(localPosts);
   },
 
-  removePost(id) {
+  async removePost(id) {
+    if (this.cloudReady && this.isAdmin()) {
+      await this.db.collection("posts").doc(id).remove();
+      return;
+    }
+
     this.saveLocalPosts(this.readLocalPosts().filter((post) => post.id !== id));
   },
 
-  readDrafts() {
+  readLocalDrafts() {
     try {
       return JSON.parse(localStorage.getItem(this.draftsKey) || "[]");
     } catch {
@@ -136,26 +244,53 @@ window.EXPERIENCE_STORE = {
     }
   },
 
-  saveDrafts(drafts) {
+  saveLocalDrafts(drafts) {
     localStorage.setItem(this.draftsKey, JSON.stringify(drafts));
   },
 
-  addDraft(draft) {
-    const drafts = this.readDrafts();
+  async readDrafts() {
+    if (!this.isAdmin()) return [];
+
+    try {
+      const cloudDrafts = await this.readCloudCollection("drafts");
+      if (cloudDrafts) return cloudDrafts;
+    } catch (error) {
+      this.cloudError = error?.message || "读取草稿失败，已使用本地草稿。";
+    }
+
+    return this.readLocalDrafts();
+  },
+
+  async addDraft(draft) {
+    if (this.cloudReady && this.isAdmin()) {
+      await this.db.collection("drafts").doc(draft.id).set(this.toCloudDoc(draft));
+      return;
+    }
+
+    const drafts = this.readLocalDrafts();
     drafts.unshift(draft);
-    this.saveDrafts(drafts);
+    this.saveLocalDrafts(drafts);
   },
 
-  updateDraft(id, draft) {
-    const drafts = this.readDrafts().map((item) => (item.id === id ? draft : item));
-    this.saveDrafts(drafts);
+  async updateDraft(id, draft) {
+    if (this.cloudReady && this.isAdmin()) {
+      await this.db.collection("drafts").doc(id).set(this.toCloudDoc(draft));
+      return;
+    }
+
+    this.saveLocalDrafts(this.readLocalDrafts().map((item) => (item.id === id ? draft : item)));
   },
 
-  removeDraft(id) {
-    this.saveDrafts(this.readDrafts().filter((draft) => draft.id !== id));
+  async removeDraft(id) {
+    if (this.cloudReady && this.isAdmin()) {
+      await this.db.collection("drafts").doc(id).remove();
+      return;
+    }
+
+    this.saveLocalDrafts(this.readLocalDrafts().filter((draft) => draft.id !== id));
   },
 
-  readFavorites() {
+  readLocalFavorites() {
     try {
       return new Set(JSON.parse(localStorage.getItem(this.favoritesKey) || "[]"));
     } catch {
@@ -163,7 +298,39 @@ window.EXPERIENCE_STORE = {
     }
   },
 
-  saveFavorites(favorites) {
+  saveLocalFavorites(favorites) {
     localStorage.setItem(this.favoritesKey, JSON.stringify([...favorites]));
+  },
+
+  async readFavorites() {
+    if (!this.isAdmin()) return new Set();
+
+    try {
+      if (this.cloudReady && this.db) {
+        const result = await this.db.collection("favorites").limit(1000).get();
+        return new Set((result.data || []).map((item) => item.post_id || item.id || item._id));
+      }
+    } catch (error) {
+      this.cloudError = error?.message || "读取收藏失败，已使用本地收藏。";
+    }
+
+    return this.readLocalFavorites();
+  },
+
+  async saveFavorite(id, enabled) {
+    if (this.cloudReady && this.isAdmin()) {
+      const ref = this.db.collection("favorites").doc(id);
+      if (enabled) {
+        await ref.set({ post_id: id, created_at: new Date().toISOString() });
+      } else {
+        await ref.remove();
+      }
+      return;
+    }
+
+    const favorites = this.readLocalFavorites();
+    if (enabled) favorites.add(id);
+    else favorites.delete(id);
+    this.saveLocalFavorites(favorites);
   },
 };

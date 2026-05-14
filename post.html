@@ -12,56 +12,60 @@
       <article class="article-shell" id="articleShell"></article>
     </main>
 
+    <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.5/cloudbase.full.js"></script>
     <script src="data.js"></script>
     <script>
-      const posts = window.EXPERIENCE_STORE.getPosts();
-      const params = new URLSearchParams(window.location.search);
-      const post = posts.find((item) => item.id === params.get("id")) || posts[0];
-      const articleShell = document.querySelector("#articleShell");
+      (async () => {
+        await window.EXPERIENCE_STORE.init();
+        const posts = await window.EXPERIENCE_STORE.getPosts();
+        const params = new URLSearchParams(window.location.search);
+        const post = posts.find((item) => item.id === params.get("id")) || posts[0];
+        const articleShell = document.querySelector("#articleShell");
 
-      document.title = `${post.title} - Harth的备忘录`;
-      articleShell.innerHTML = `
-        <header class="article-header">
-          <div class="detail-meta">
-            <span>${post.category}</span>
-            <span>${post.date}</span>
-            <span>${post.readTime}</span>
-          </div>
-          <h1>${post.title}</h1>
-          <p>${post.summary}</p>
-          <div class="tag-row">
-            ${post.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
-          </div>
-        </header>
+        document.title = `${post.title} - Harth的备忘录`;
+        articleShell.innerHTML = `
+          <header class="article-header">
+            <div class="detail-meta">
+              <span>${post.category}</span>
+              <span>${post.date}</span>
+              <span>${post.readTime}</span>
+            </div>
+            <h1>${post.title}</h1>
+            <p>${post.summary}</p>
+            <div class="tag-row">
+              ${post.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}
+            </div>
+          </header>
 
-        <section class="article-section">
-          <h2>整理要点</h2>
-          <ul>
-            ${post.takeaways.map((item) => `<li>${item}</li>`).join("")}
-          </ul>
-        </section>
+          <section class="article-section">
+            <h2>整理要点</h2>
+            <ul>
+              ${post.takeaways.map((item) => `<li>${item}</li>`).join("")}
+            </ul>
+          </section>
 
-        ${post.content
-          .map(
-            (section) => `
-              <section class="article-section">
-                <h2>${section.heading}</h2>
-                <p>${section.body}</p>
-              </section>
-            `,
-          )
-          .join("")}
-      `;
+          ${post.content
+            .map(
+              (section) => `
+                <section class="article-section">
+                  <h2>${section.heading}</h2>
+                  <p>${section.body}</p>
+                </section>
+              `,
+            )
+            .join("")}
+        `;
 
-      document.querySelector(".back-link").addEventListener("click", (event) => {
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-        event.preventDefault();
-        const targetUrl = event.currentTarget.href;
-        document.body.classList.add("page-leaving");
-        window.setTimeout(() => {
-          window.location.href = targetUrl;
-        }, 220);
-      });
+        document.querySelector(".back-link").addEventListener("click", (event) => {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          event.preventDefault();
+          const targetUrl = event.currentTarget.href;
+          document.body.classList.add("page-leaving");
+          window.setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 220);
+        });
+      })();
     </script>
   </body>
 </html>

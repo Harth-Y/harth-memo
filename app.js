@@ -1,7 +1,7 @@
 const store = window.EXPERIENCE_STORE;
-let posts = store.getPosts();
-let drafts = store.readDrafts();
-let favorites = store.readFavorites();
+let posts = [];
+let drafts = [];
+let favorites = new Set();
 let activeCategory = "全部";
 let activeSection = "all";
 let activeView = "posts";
@@ -23,6 +23,16 @@ const saveDraftBtn = document.querySelector("#saveDraftBtn");
 const newPostBtn = document.querySelector("#newPostBtn");
 const sectionTitle = document.querySelector(".section-heading h2");
 const sidebarToggle = document.querySelector("#sidebarToggle");
+const authStatus = document.querySelector("#authStatus");
+const loginBtn = document.querySelector("#loginBtn");
+const logoutBtn = document.querySelector("#logoutBtn");
+const loginDialog = document.querySelector("#loginDialog");
+const loginForm = loginDialog.querySelector("form");
+const closeLoginBtn = document.querySelector("#closeLoginBtn");
+const cancelLoginBtn = document.querySelector("#cancelLoginBtn");
+const loginError = document.querySelector("#loginError");
+
+postList.innerHTML = `<article class="post-card empty-state"><h3>正在加载</h3><p>正在连接 CloudBase 并读取资料。</p></article>`;
 
 function applySidebarState(collapsed) {
   document.body.classList.toggle("sidebar-collapsed", collapsed);
@@ -37,6 +47,21 @@ function getCategories() {
 
 function getTags() {
   return [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+
+async function refreshData() {
+  posts = await store.getPosts();
+  drafts = await store.readDrafts();
+  favorites = await store.readFavorites();
+  localPostIds = new Set(store.readLocalPosts().map((post) => post.id));
+}
+
+function updateAuthUI() {
+  const isAdmin = store.isAdmin();
+  authStatus.textContent = isAdmin ? "管理员模式" : "只读模式";
+  loginBtn.classList.toggle("hidden", isAdmin);
+  logoutBtn.classList.toggle("hidden", !isAdmin);
+  newPostBtn.classList.toggle("hidden", !isAdmin);
 }
 
 function createCategoryButtons() {
@@ -70,12 +95,17 @@ function getFilteredPosts() {
 
 function createPostCard(post) {
   const isFavorite = favorites.has(post.id);
-  const canDelete = localPostIds.has(post.id);
+  const canManage = store.isAdmin();
+  const canDelete = canManage && (post.cloud || localPostIds.has(post.id));
   return `
     <article class="post-card" data-href="post.html?id=${post.id}">
-      <button class="favorite-button ${isFavorite ? "active" : ""}" type="button" data-favorite-id="${post.id}" aria-label="${isFavorite ? "取消收藏" : "收藏"} ${post.title}">
-        ${isFavorite ? "★" : "☆"}
-      </button>
+      ${
+        canManage
+          ? `<button class="favorite-button ${isFavorite ? "active" : ""}" type="button" data-favorite-id="${post.id}" aria-label="${isFavorite ? "取消收藏" : "收藏"} ${post.title}">
+              ${isFavorite ? "★" : "☆"}
+            </button>`
+          : ""
+      }
       <div class="post-card-main">
         <div class="post-meta">
           <span>${post.category}</span>
@@ -199,6 +229,11 @@ function renderDrafts() {
   categoryRow.innerHTML = "";
   postList.className = "post-list";
 
+  if (!store.isAdmin()) {
+    postList.innerHTML = `<article class="post-card empty-state"><h3>草稿需要登录</h3><p>同事访问时只显示已发布资料。管理员登录后可以查看和编辑草稿。</p></article>`;
+    return;
+  }
+
   if (!drafts.length) {
     postList.innerHTML = `<article class="post-card empty-state"><h3>暂无草稿</h3><p>点击“新建帖子”，选择“保存草稿”后会出现在这里。</p></article>`;
     return;
@@ -232,6 +267,7 @@ function renderDrafts() {
 }
 
 function render() {
+  updateAuthUI();
   updateCounts();
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.section === activeSection));
   document.querySelectorAll(".view-toggle button").forEach((item) => item.classList.toggle("active", item.dataset.view === activeView));
@@ -332,16 +368,15 @@ function openDraftEditor(draft) {
   composeDialog.showModal();
 }
 
-function handlePostPublish(event) {
+async function handlePostPublish(event) {
   event.preventDefault();
+  if (!store.isAdmin()) return;
   const post = buildPostFromForm();
   if (!post) return;
 
-  store.addPost(post);
-  if (editingDraftId) store.removeDraft(editingDraftId);
-  posts = store.getPosts();
-  localPostIds = new Set(store.readLocalPosts().map((item) => item.id));
-  drafts = store.readDrafts();
+  await store.addPost(post);
+  if (editingDraftId) await store.removeDraft(editingDraftId);
+  await refreshData();
   activeSection = "all";
   activeCategory = "全部";
   resetCompose();
@@ -349,14 +384,15 @@ function handlePostPublish(event) {
   render();
 }
 
-function handleDraftSave() {
+async function handleDraftSave() {
+  if (!store.isAdmin()) return;
   const draft = buildPostFromForm({ allowEmpty: true, existingId: editingDraftId });
   if (editingDraftId) {
-    store.updateDraft(editingDraftId, draft);
+    await store.updateDraft(editingDraftId, draft);
   } else {
-    store.addDraft(draft);
+    await store.addDraft(draft);
   }
-  drafts = store.readDrafts();
+  await refreshData();
   activeSection = "drafts";
   activeCategory = "全部";
   resetCompose();
@@ -388,18 +424,15 @@ categoryRow.addEventListener("click", (event) => {
   render();
 });
 
-postList.addEventListener("click", (event) => {
+postList.addEventListener("click", async (event) => {
   const favoriteButton = event.target.closest("[data-favorite-id]");
   if (favoriteButton) {
     event.preventDefault();
     event.stopPropagation();
+    if (!store.isAdmin()) return;
     const id = favoriteButton.dataset.favoriteId;
-    if (favorites.has(id)) {
-      favorites.delete(id);
-    } else {
-      favorites.add(id);
-    }
-    store.saveFavorites(favorites);
+    await store.saveFavorite(id, !favorites.has(id));
+    favorites = await store.readFavorites();
     render();
     return;
   }
@@ -428,11 +461,9 @@ postList.addEventListener("click", (event) => {
       openDraftEditor(draft);
       return;
     }
-    store.addPost({ ...draft, date: new Date().toISOString().slice(0, 10), updatedAt: undefined });
-    store.removeDraft(draft.id);
-    posts = store.getPosts();
-    localPostIds = new Set(store.readLocalPosts().map((item) => item.id));
-    drafts = store.readDrafts();
+    await store.addPost({ ...draft, date: new Date().toISOString().slice(0, 10), updatedAt: undefined });
+    await store.removeDraft(draft.id);
+    await refreshData();
     activeSection = "all";
     render();
     return;
@@ -440,8 +471,8 @@ postList.addEventListener("click", (event) => {
 
   const draftDeleteButton = event.target.closest("[data-draft-delete]");
   if (draftDeleteButton) {
-    store.removeDraft(draftDeleteButton.dataset.draftDelete);
-    drafts = store.readDrafts();
+    await store.removeDraft(draftDeleteButton.dataset.draftDelete);
+    await refreshData();
     render();
     return;
   }
@@ -451,14 +482,13 @@ postList.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
     const id = postDeleteButton.dataset.postDelete;
-    if (!localPostIds.has(id)) return;
+    if (!store.isAdmin()) return;
+    if (!posts.find((item) => item.id === id)?.cloud && !localPostIds.has(id)) return;
     const post = posts.find((item) => item.id === id);
-    if (!window.confirm(`确定删除《${post?.title || "这篇帖子"}》吗？这个操作只会删除本地发布的帖子。`)) return;
-    store.removePost(id);
-    favorites.delete(id);
-    store.saveFavorites(favorites);
-    posts = store.getPosts();
-    localPostIds = new Set(store.readLocalPosts().map((item) => item.id));
+    if (!window.confirm(`确定删除《${post?.title || "这篇帖子"}》吗？`)) return;
+    await store.removePost(id);
+    if (favorites.has(id)) await store.saveFavorite(id, false);
+    await refreshData();
     render();
     return;
   }
@@ -475,6 +505,7 @@ searchInput.addEventListener("input", () => {
 composeForm.addEventListener("submit", handlePostPublish);
 
 newPostBtn.addEventListener("click", () => {
+  if (!store.isAdmin()) return;
   if (typeof composeDialog.showModal === "function") {
     resetCompose();
     composeDialog.showModal();
@@ -498,5 +529,46 @@ sidebarToggle.addEventListener("click", () => {
   applySidebarState(collapsed);
 });
 
-applySidebarState(!window.matchMedia("(max-width: 980px)").matches && localStorage.getItem("harth-memo-sidebar-collapsed") === "1");
-render();
+loginBtn.addEventListener("click", () => {
+  loginError.classList.add("hidden");
+  loginForm.reset();
+  loginDialog.showModal();
+});
+
+closeLoginBtn.addEventListener("click", () => loginDialog.close());
+cancelLoginBtn.addEventListener("click", () => loginDialog.close());
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  loginError.classList.add("hidden");
+  const username = document.querySelector("#loginUsernameInput").value.trim();
+  const password = document.querySelector("#loginPasswordInput").value;
+
+  try {
+    await store.login(username, password);
+    await refreshData();
+    loginDialog.close();
+    render();
+  } catch (error) {
+    loginError.textContent = error?.message || "登录失败，请检查账号和密码。";
+    loginError.classList.remove("hidden");
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await store.logout();
+  await refreshData();
+  activeSection = "all";
+  render();
+});
+
+async function boot() {
+  applySidebarState(!window.matchMedia("(max-width: 980px)").matches && localStorage.getItem("harth-memo-sidebar-collapsed") === "1");
+  await store.init();
+  await refreshData();
+  render();
+}
+
+boot().catch((error) => {
+  postList.innerHTML = `<article class="post-card empty-state"><h3>加载失败</h3><p>${error?.message || "请稍后刷新重试。"}</p></article>`;
+});
