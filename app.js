@@ -23,7 +23,9 @@ const saveDraftBtn = document.querySelector("#saveDraftBtn");
 const newPostBtn = document.querySelector("#newPostBtn");
 const sectionTitle = document.querySelector(".section-heading h2");
 const sidebarToggle = document.querySelector("#sidebarToggle");
-const authStatus = document.querySelector("#authStatus");
+const userProfile = document.querySelector("#userProfile");
+const userAvatar = document.querySelector("#userAvatar");
+const userName = document.querySelector("#userName");
 const loginBtn = document.querySelector("#loginBtn");
 const logoutBtn = document.querySelector("#logoutBtn");
 const loginDialog = document.querySelector("#loginDialog");
@@ -56,9 +58,19 @@ async function refreshData() {
   localPostIds = new Set(store.readLocalPosts().map((post) => post.id));
 }
 
+function getAvatarLetter(name) {
+  const trimmed = String(name || "Harth").trim();
+  return trimmed ? [...trimmed][0].toUpperCase() : "H";
+}
+
 function updateAuthUI() {
   const isAdmin = store.isAdmin();
-  authStatus.textContent = isAdmin ? "管理员模式" : "只读模式";
+  const profile = store.getUserProfile();
+  userProfile.classList.toggle("hidden", !isAdmin);
+  userName.textContent = profile.name;
+  userAvatar.textContent = getAvatarLetter(profile.name);
+  userAvatar.style.backgroundImage = profile.avatar ? `url("${profile.avatar}")` : "";
+  userAvatar.classList.toggle("has-image", Boolean(profile.avatar));
   loginBtn.classList.toggle("hidden", isAdmin);
   logoutBtn.classList.toggle("hidden", !isAdmin);
   newPostBtn.classList.toggle("hidden", !isAdmin);

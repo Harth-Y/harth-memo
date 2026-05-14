@@ -58,8 +58,11 @@
             <h1>Harth的备忘录</h1>
           </div>
           <div class="topbar-actions">
-            <span class="auth-status" id="authStatus">只读模式</span>
-            <button class="ghost-action" type="button" id="loginBtn">管理员登录</button>
+            <div class="user-profile hidden" id="userProfile">
+              <span class="user-avatar" id="userAvatar" aria-hidden="true">H</span>
+              <span class="user-name" id="userName">Harth</span>
+            </div>
+            <button class="ghost-action" type="button" id="loginBtn">登录</button>
             <button class="ghost-action hidden" type="button" id="logoutBtn">退出</button>
             <button class="primary-action" type="button" id="newPostBtn">
               <span aria-hidden="true">+</span>
@@ -140,7 +143,7 @@
     <dialog class="compose-dialog auth-dialog" id="loginDialog">
       <form method="dialog">
         <header>
-          <h2>管理员登录</h2>
+          <h2>登录</h2>
           <button id="closeLoginBtn" type="button" aria-label="关闭">×</button>
         </header>
         <p class="dialog-note">同事无需登录即可查看已发布帖子。登录后可发布、保存草稿、收藏和删除本地云端帖子。</p>

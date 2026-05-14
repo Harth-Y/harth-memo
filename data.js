@@ -103,10 +103,12 @@ window.EXPERIENCE_STORE = {
   postsKey: "harth-memo-posts",
   draftsKey: "harth-memo-drafts",
   favoritesKey: "harth-memo-favorites",
+  userNameKey: "harth-memo-user-name",
   app: null,
   auth: null,
   db: null,
   user: null,
+  displayName: "",
   cloudReady: false,
   cloudError: "",
 
@@ -121,6 +123,7 @@ window.EXPERIENCE_STORE = {
       this.auth = this.app.auth();
       this.db = this.app.database();
       this.user = await this.auth.getCurrentUser().catch(() => null);
+      this.displayName = localStorage.getItem(this.userNameKey) || "";
       this.cloudReady = true;
     } catch (error) {
       this.cloudReady = false;
@@ -130,6 +133,20 @@ window.EXPERIENCE_STORE = {
 
   isAdmin() {
     return Boolean(this.user && String(this.user.uid) === this.adminUid);
+  },
+
+  getUserProfile() {
+    const name =
+      this.user?.nickName ||
+      this.user?.nickname ||
+      this.user?.displayName ||
+      this.user?.username ||
+      this.displayName ||
+      "Harth";
+    return {
+      name,
+      avatar: this.user?.avatarUrl || this.user?.avatar || "",
+    };
   },
 
   async login(username, password) {
@@ -149,11 +166,18 @@ window.EXPERIENCE_STORE = {
       await this.logout();
       throw new Error("当前账号不是管理员账号。");
     }
+    this.displayName = this.getUserProfile().name || username;
+    if (!this.user?.nickName && !this.user?.nickname && !this.user?.displayName && !this.user?.username) {
+      this.displayName = username || this.displayName;
+    }
+    localStorage.setItem(this.userNameKey, this.displayName);
   },
 
   async logout() {
     if (this.auth?.signOut) await this.auth.signOut();
     this.user = null;
+    this.displayName = "";
+    localStorage.removeItem(this.userNameKey);
   },
 
   normalizePost(doc) {
