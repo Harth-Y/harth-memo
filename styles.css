@@ -61,7 +61,8 @@ body.page-leaving::after {
   inset: 0;
   z-index: 70;
   display: grid;
-  place-items: center;
+  place-items: start center;
+  padding-top: 34vh;
   pointer-events: none;
   opacity: 0;
   background: rgba(244, 243, 239, 0.46);
