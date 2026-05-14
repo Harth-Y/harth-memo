@@ -66,14 +66,16 @@ function getAvatarLetter(name) {
 function updateAuthUI() {
   const isAdmin = store.isAdmin();
   const profile = store.getUserProfile();
-  userProfile.classList.toggle("hidden", !isAdmin);
-  userName.textContent = profile.name;
-  userAvatar.textContent = getAvatarLetter(profile.name);
-  userAvatar.style.backgroundImage = profile.avatar ? `url("${profile.avatar}")` : "";
-  userAvatar.classList.toggle("has-image", Boolean(profile.avatar));
-  loginBtn.classList.toggle("hidden", isAdmin);
-  logoutBtn.classList.toggle("hidden", !isAdmin);
-  newPostBtn.classList.toggle("hidden", !isAdmin);
+  userProfile?.classList.toggle("hidden", !isAdmin);
+  if (userName) userName.textContent = profile.name;
+  if (userAvatar) {
+    userAvatar.textContent = getAvatarLetter(profile.name);
+    userAvatar.style.backgroundImage = profile.avatar ? `url("${profile.avatar}")` : "";
+    userAvatar.classList.toggle("has-image", Boolean(profile.avatar));
+  }
+  loginBtn?.classList.toggle("hidden", isAdmin);
+  logoutBtn?.classList.toggle("hidden", !isAdmin);
+  newPostBtn?.classList.toggle("hidden", !isAdmin);
 }
 
 function createCategoryButtons() {
@@ -89,10 +91,16 @@ function createCategoryButtons() {
 }
 
 function updateCounts() {
-  document.querySelector("#allCount").textContent = posts.length;
-  document.querySelector("#favoriteCount").textContent = favorites.size;
-  document.querySelector("#draftCount").textContent = drafts.length;
-  document.querySelector("#tagCount").textContent = getTags().length;
+  const counts = {
+    allCount: posts.length,
+    favoriteCount: favorites.size,
+    draftCount: drafts.length,
+    tagCount: getTags().length,
+  };
+  Object.entries(counts).forEach(([id, value]) => {
+    const target = document.querySelector(`#${id}`);
+    if (target) target.textContent = value;
+  });
 }
 
 function getFilteredPosts() {
