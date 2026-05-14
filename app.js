@@ -22,7 +22,6 @@ const cancelDialogBtn = document.querySelector("#cancelDialogBtn");
 const saveDraftBtn = document.querySelector("#saveDraftBtn");
 const newPostBtn = document.querySelector("#newPostBtn");
 const sectionTitle = document.querySelector(".section-heading h2");
-const sidebarToggle = document.querySelector("#sidebarToggle");
 const userProfile = document.querySelector("#userProfile");
 const userAvatar = document.querySelector("#userAvatar");
 const userName = document.querySelector("#userName");
@@ -35,13 +34,6 @@ const cancelLoginBtn = document.querySelector("#cancelLoginBtn");
 const loginError = document.querySelector("#loginError");
 
 postList.innerHTML = `<article class="post-card empty-state"><h3>正在加载</h3><p>正在连接 CloudBase 并读取资料。</p></article>`;
-
-function applySidebarState(collapsed) {
-  document.body.classList.toggle("sidebar-collapsed", collapsed);
-  sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
-  sidebarToggle.setAttribute("aria-label", collapsed ? "展开侧栏" : "收起侧栏");
-  sidebarToggle.textContent = collapsed ? "›" : "‹";
-}
 
 function getCategories() {
   return ["全部", ...new Set(posts.map((post) => post.category))];
@@ -542,13 +534,6 @@ cancelDialogBtn.addEventListener("click", () => {
   composeDialog.close();
 });
 
-sidebarToggle.addEventListener("click", () => {
-  if (window.matchMedia("(max-width: 980px)").matches) return;
-  const collapsed = !document.body.classList.contains("sidebar-collapsed");
-  localStorage.setItem("harth-memo-sidebar-collapsed", collapsed ? "1" : "0");
-  applySidebarState(collapsed);
-});
-
 loginBtn.addEventListener("click", () => {
   loginError.classList.add("hidden");
   loginForm.reset();
@@ -583,7 +568,6 @@ logoutBtn.addEventListener("click", async () => {
 });
 
 async function boot() {
-  applySidebarState(!window.matchMedia("(max-width: 980px)").matches && localStorage.getItem("harth-memo-sidebar-collapsed") === "1");
   await store.init();
   await refreshData();
   render();
