@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Harth的备忘录</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="站点导航">
+        <div class="sidebar-head">
+          <div class="brand">
+            <button class="brand-mark" id="sidebarToggle" type="button" aria-label="收起侧栏" aria-expanded="true">
+              ‹
+            </button>
+            <span class="brand-text">
+              <strong>Experience Hub</strong>
+              <small>个人经验归档</small>
+            </span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="主导航">
+          <button class="nav-item active" type="button" data-section="all" title="主页">
+            <span class="nav-icon" aria-hidden="true">主</span>
+            <span class="nav-label">主页</span>
+            <b id="allCount">0</b>
+          </button>
+          <button class="nav-item" type="button" data-section="favorites" title="收藏">
+            <span class="nav-icon" aria-hidden="true">收</span>
+            <span class="nav-label">收藏</span>
+            <b id="favoriteCount">0</b>
+          </button>
+          <button class="nav-item" type="button" data-section="drafts" title="草稿">
+            <span class="nav-icon" aria-hidden="true">草</span>
+            <span class="nav-label">草稿</span>
+            <b id="draftCount">0</b>
+          </button>
+          <button class="nav-item" type="button" data-section="tags" title="标签管理">
+            <span class="nav-icon" aria-hidden="true">签</span>
+            <span class="nav-label">标签管理</span>
+            <b id="tagCount">0</b>
+          </button>
+        </nav>
+
+        <section class="sidebar-panel">
+          <p class="panel-label">本周整理</p>
+          <strong>6 篇经验已归档</strong>
+          <span>建议把同类问题统一标签，后面查找会更快。</span>
+        </section>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Knowledge Base</p>
+            <h1>Harth的备忘录</h1>
+          </div>
+          <button class="primary-action" type="button" id="newPostBtn">
+            <span aria-hidden="true">+</span>
+            新建帖子
+          </button>
+        </header>
+
+        <section class="workspace">
+          <div class="toolbar" aria-label="搜索和筛选">
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="searchInput" type="search" placeholder="搜索标题、标签或摘要" />
+            </label>
+            <div class="view-toggle" role="tablist" aria-label="视图切换">
+              <button class="active" type="button" data-view="posts">帖子</button>
+              <button type="button" data-view="timeline">时间线</button>
+            </div>
+          </div>
+
+          <div class="category-row" id="categoryRow" aria-label="分类筛选"></div>
+
+          <div class="main-grid post-index-grid">
+            <section class="post-feed" aria-label="帖子列表">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Latest Posts</p>
+                  <h2>最新经验</h2>
+                </div>
+                <span id="resultCount"></span>
+              </div>
+              <div class="post-list" id="postList"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="compose-dialog" id="composeDialog">
+      <form method="dialog">
+        <header>
+          <h2 id="composeTitle">新建帖子</h2>
+          <button id="closeDialogBtn" type="button" aria-label="关闭">×</button>
+        </header>
+        <label>
+          标题
+          <input id="postTitleInput" type="text" placeholder="例如：Keil 编译报错排查流程" required />
+        </label>
+        <label>
+          分类
+          <select id="postCategoryInput">
+            <option>开发调试</option>
+            <option>项目复盘</option>
+            <option>工具配置</option>
+            <option>资料整理</option>
+          </select>
+        </label>
+        <label>
+          标签
+          <input id="postTagsInput" type="text" placeholder="用逗号分隔，例如：Keil, 编译, 嵌入式" />
+        </label>
+        <label>
+          内容摘要
+          <textarea id="postSummaryInput" rows="5" placeholder="记录背景、问题、解决方法和注意事项" required></textarea>
+        </label>
+        <label>
+          整理要点
+          <textarea id="postTakeawaysInput" rows="4" placeholder="每行一个要点，鼠标悬停帖子时会展开显示"></textarea>
+        </label>
+        <footer>
+          <button id="cancelDialogBtn" type="button" class="ghost-action">取消</button>
+          <button id="saveDraftBtn" type="button" class="ghost-action">保存草稿</button>
+          <button type="submit" class="primary-action" value="publish">发布帖子</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

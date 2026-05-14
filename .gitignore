@@ -1,0 +1,13 @@
+# Local browser/test artifacts
+output/
+.npm-cache/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local-only handoff notes can be private by default.
+# Remove this line if you want to publish notes too.
+notes/
