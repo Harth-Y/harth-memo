@@ -32,8 +32,17 @@ const loginForm = loginDialog.querySelector("form");
 const closeLoginBtn = document.querySelector("#closeLoginBtn");
 const cancelLoginBtn = document.querySelector("#cancelLoginBtn");
 const loginError = document.querySelector("#loginError");
+const pageLoader = document.querySelector("#pageLoader");
 
 postList.innerHTML = `<article class="post-card empty-state"><h3>正在加载</h3><p>正在连接 CloudBase 并读取资料。</p></article>`;
+
+function showPageLoader() {
+  pageLoader?.classList.add("is-visible");
+}
+
+function hidePageLoader() {
+  pageLoader?.classList.remove("is-visible");
+}
 
 function getCategories() {
   return ["全部", ...new Set(posts.map((post) => post.category))];
@@ -157,9 +166,10 @@ function navigateWithTransition(url, sourceElement) {
   if (document.body.classList.contains("page-leaving")) return;
   sourceElement?.classList.add("is-opening");
   document.body.classList.add("page-leaving");
+  showPageLoader();
   window.setTimeout(() => {
     window.location.href = url;
-  }, 240);
+  }, 320);
 }
 
 function renderPostCards(filteredPosts) {
@@ -568,11 +578,14 @@ logoutBtn.addEventListener("click", async () => {
 });
 
 async function boot() {
+  showPageLoader();
   await store.init();
   await refreshData();
   render();
+  hidePageLoader();
 }
 
 boot().catch((error) => {
+  hidePageLoader();
   postList.innerHTML = `<article class="post-card empty-state"><h3>加载失败</h3><p>${error?.message || "请稍后刷新重试。"}</p></article>`;
 });

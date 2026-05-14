@@ -4,16 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>帖子详情 - Harth的备忘录</title>
-    <link rel="stylesheet" href="styles.css?v=202605141552" />
+    <link rel="stylesheet" href="styles.css?v=202605141605" />
   </head>
   <body>
     <main class="post-page">
       <a class="back-link" href="index.html">← 返回经验列表</a>
       <article class="article-shell" id="articleShell"></article>
     </main>
+    <div class="page-loader is-visible" id="pageLoader" aria-hidden="true">
+      <span class="loader-ring"></span>
+    </div>
 
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.5/cloudbase.full.js"></script>
-    <script src="data.js?v=202605141552"></script>
+    <script src="data.js?v=202605141605"></script>
     <script>
       (async () => {
         await window.EXPERIENCE_STORE.init();
@@ -55,17 +58,23 @@
             )
             .join("")}
         `;
+        document.querySelector("#pageLoader")?.classList.remove("is-visible");
 
         document.querySelector(".back-link").addEventListener("click", (event) => {
           if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           event.preventDefault();
           const targetUrl = event.currentTarget.href;
           document.body.classList.add("page-leaving");
+          document.querySelector("#pageLoader")?.classList.add("is-visible");
           window.setTimeout(() => {
             window.location.href = targetUrl;
-          }, 220);
+          }, 320);
         });
-      })();
+      })().catch((error) => {
+        const articleShell = document.querySelector("#articleShell");
+        document.querySelector("#pageLoader")?.classList.remove("is-visible");
+        articleShell.innerHTML = `<section class="article-section"><h2>加载失败</h2><p>${error?.message || "请稍后刷新重试。"}</p></section>`;
+      });
     </script>
   </body>
 </html>
