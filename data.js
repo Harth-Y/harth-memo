@@ -143,9 +143,10 @@ window.EXPERIENCE_STORE = {
       this.user?.username ||
       this.displayName ||
       "Harth";
+    const avatar = this.user?.avatarUrl || this.user?.avatar || "";
     return {
       name,
-      avatar: this.user?.avatarUrl || this.user?.avatar || "",
+      avatar: typeof avatar === "string" && /^https?:\/\//.test(avatar) ? avatar : "",
     };
   },
 
