@@ -123,6 +123,7 @@ window.EXPERIENCE_STORE = {
       this.auth = this.app.auth();
       this.db = this.app.database();
       await this.refreshUser();
+      if (!this.user) await this.loginAnonymously();
       this.displayName = localStorage.getItem(this.userNameKey) || "";
       this.cloudReady = true;
     } catch (error) {
@@ -144,6 +145,25 @@ window.EXPERIENCE_STORE = {
     }
     this.user = currentUser || detailUser ? { ...(currentUser || {}), ...(detailUser || {}) } : null;
     return this.user;
+  },
+
+  isAnonymousUser() {
+    return Boolean(this.user && (this.user.isAnonymous || this.user.loginType === "ANONYMOUS" || this.user.providerType === "anonymous"));
+  },
+
+  async loginAnonymously() {
+    if (!this.auth) return null;
+    if (this.auth.signInAnonymously) {
+      await this.auth.signInAnonymously();
+    } else if (this.auth.anonymousAuthProvider) {
+      const provider = this.auth.anonymousAuthProvider();
+      await provider.signIn();
+    } else if (this.auth.signInWithAnonymous) {
+      await this.auth.signInWithAnonymous();
+    } else {
+      return null;
+    }
+    return this.refreshUser();
   },
 
   getUserProfile() {
@@ -172,6 +192,10 @@ window.EXPERIENCE_STORE = {
 
   async login(username, password) {
     if (!this.auth) throw new Error("CloudBase 尚未初始化");
+    if (this.isAnonymousUser() && this.auth.signOut) {
+      await this.auth.signOut();
+      this.user = null;
+    }
     let loginState = null;
     if (this.auth.signInWithPassword) {
       loginState = await this.auth.signInWithPassword({ username, password });
@@ -200,6 +224,7 @@ window.EXPERIENCE_STORE = {
     this.user = null;
     this.displayName = "";
     localStorage.removeItem(this.userNameKey);
+    await this.loginAnonymously();
   },
 
   normalizePost(doc) {
