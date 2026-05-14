@@ -109,7 +109,7 @@ function getFilteredPosts() {
   return posts.filter((post) => {
     const matchesCategory = activeCategory === "全部" || post.category === activeCategory;
     const matchesSection = activeSection !== "favorites" || favorites.has(post.id);
-    const haystack = [post.title, post.category, post.summary, ...post.tags, ...post.takeaways].join(" ").toLowerCase();
+    const haystack = [post.title, post.category, post.summary, post.body || "", ...post.tags, ...post.takeaways].join(" ").toLowerCase();
     return matchesCategory && matchesSection && (!keyword || haystack.includes(keyword));
   });
 }
@@ -343,10 +343,16 @@ function parseTakeaways() {
     .filter(Boolean);
 }
 
+function bodyFromLegacyContent(content) {
+  if (!Array.isArray(content) || !content.length) return "";
+  return content.map((section) => `## ${section.heading}\n\n${section.body}`).join("\n\n");
+}
+
 function buildPostFromForm({ allowEmpty = false, existingId = null } = {}) {
   const title = document.querySelector("#postTitleInput").value.trim();
   const category = document.querySelector("#postCategoryInput").value;
   const summary = document.querySelector("#postSummaryInput").value.trim();
+  const body = document.querySelector("#postBodyInput").value.trim();
   const tags = parseTags();
   const takeaways = parseTakeaways();
 
@@ -360,12 +366,13 @@ function buildPostFromForm({ allowEmpty = false, existingId = null } = {}) {
     updatedAt: new Date().toISOString().slice(0, 10),
     readTime: estimateReadTime(summary || title),
     summary,
+    body,
     tags: tags.length ? tags : [category],
     takeaways: takeaways.length ? takeaways : ["补充背景、现象、解决方法和适用范围"],
     content: [
       {
         heading: "完整记录",
-        body: summary || "草稿尚未填写正文。",
+        body: body || summary || "草稿尚未填写正文。",
       },
     ],
   };
@@ -386,6 +393,7 @@ function openDraftEditor(draft) {
   document.querySelector("#postCategoryInput").value = draft.category;
   document.querySelector("#postTagsInput").value = draft.tags.join(", ");
   document.querySelector("#postSummaryInput").value = draft.summary;
+  document.querySelector("#postBodyInput").value = draft.body || bodyFromLegacyContent(draft.content);
   document.querySelector("#postTakeawaysInput").value = draft.takeaways.join("\n");
   composeDialog.showModal();
 }

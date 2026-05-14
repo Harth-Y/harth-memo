@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>帖子详情 - Harth的备忘录</title>
-    <link rel="stylesheet" href="styles.css?v=202605141605" />
+    <link rel="stylesheet" href="styles.css?v=202605141626" />
   </head>
   <body>
     <main class="post-page">
@@ -16,14 +16,101 @@
     </div>
 
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.5/cloudbase.full.js"></script>
-    <script src="data.js?v=202605141605"></script>
+    <script src="data.js?v=202605141626"></script>
     <script>
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function inlineMarkdown(value) {
+        return escapeHtml(value)
+          .replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      }
+
+      function renderMarkdown(markdown) {
+        const lines = String(markdown || "").replace(/\r\n/g, "\n").split("\n");
+        const blocks = [];
+        let paragraph = [];
+        let list = [];
+        let code = [];
+        let inCode = false;
+
+        const flushParagraph = () => {
+          if (!paragraph.length) return;
+          blocks.push(`<p>${inlineMarkdown(paragraph.join(" "))}</p>`);
+          paragraph = [];
+        };
+        const flushList = () => {
+          if (!list.length) return;
+          blocks.push(`<ul>${list.map((item) => `<li>${inlineMarkdown(item)}</li>`).join("")}</ul>`);
+          list = [];
+        };
+        const flushCode = () => {
+          if (!code.length) return;
+          blocks.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
+          code = [];
+        };
+
+        lines.forEach((line) => {
+          if (line.trim().startsWith("```")) {
+            if (inCode) {
+              flushCode();
+              inCode = false;
+            } else {
+              flushParagraph();
+              flushList();
+              inCode = true;
+            }
+            return;
+          }
+          if (inCode) {
+            code.push(line);
+            return;
+          }
+
+          const heading = line.match(/^(#{2,4})\s+(.+)$/);
+          const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+          if (!line.trim()) {
+            flushParagraph();
+            flushList();
+          } else if (heading) {
+            flushParagraph();
+            flushList();
+            const level = Math.min(heading[1].length, 4);
+            blocks.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+          } else if (bullet) {
+            flushParagraph();
+            list.push(bullet[1]);
+          } else {
+            flushList();
+            paragraph.push(line.trim());
+          }
+        });
+        flushParagraph();
+        flushList();
+        flushCode();
+
+        return blocks.join("");
+      }
+
+      function legacyContentToMarkdown(content) {
+        if (!Array.isArray(content) || !content.length) return "";
+        return content.map((section) => `## ${section.heading}\n\n${section.body}`).join("\n\n");
+      }
+
       (async () => {
         await window.EXPERIENCE_STORE.init();
         const posts = await window.EXPERIENCE_STORE.getPosts();
         const params = new URLSearchParams(window.location.search);
         const post = posts.find((item) => item.id === params.get("id")) || posts[0];
         const articleShell = document.querySelector("#articleShell");
+        const bodyMarkdown = post.body || legacyContentToMarkdown(post.content) || post.summary;
 
         document.title = `${post.title} - Harth的备忘录`;
         articleShell.innerHTML = `
@@ -47,16 +134,9 @@
             </ul>
           </section>
 
-          ${post.content
-            .map(
-              (section) => `
-                <section class="article-section">
-                  <h2>${section.heading}</h2>
-                  <p>${section.body}</p>
-                </section>
-              `,
-            )
-            .join("")}
+          <section class="article-section article-markdown">
+            ${renderMarkdown(bodyMarkdown)}
+          </section>
         `;
         document.querySelector("#pageLoader")?.classList.remove("is-visible");
 

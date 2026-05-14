@@ -823,6 +823,52 @@ h2 {
   padding-left: 22px;
 }
 
+.article-markdown {
+  display: grid;
+  gap: 16px;
+}
+
+.article-markdown h2,
+.article-markdown h3,
+.article-markdown h4,
+.article-markdown p,
+.article-markdown ul,
+.article-markdown pre {
+  margin: 0;
+}
+
+.article-markdown h3,
+.article-markdown h4 {
+  margin-top: 8px;
+}
+
+.article-markdown code {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  color: var(--text);
+  background: var(--surface-soft);
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.92em;
+}
+
+.article-markdown pre {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  background: #232821;
+}
+
+.article-markdown pre code {
+  border: 0;
+  padding: 0;
+  color: #f6f3ea;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
 .compose-dialog {
   width: min(560px, calc(100vw - 32px));
   border: 1px solid var(--line);
@@ -888,6 +934,12 @@ h2 {
 
 .compose-dialog textarea {
   resize: vertical;
+}
+
+.compose-dialog .body-editor {
+  min-height: 260px;
+  font-family: "Cascadia Code", "Consolas", "Microsoft YaHei", monospace;
+  line-height: 1.7;
 }
 
 @media (max-width: 980px) {

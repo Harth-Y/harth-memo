@@ -212,6 +212,7 @@ window.EXPERIENCE_STORE = {
       tags: Array.isArray(doc.tags) ? doc.tags : [],
       takeaways: Array.isArray(doc.takeaways) ? doc.takeaways : [],
       content: Array.isArray(doc.content) ? doc.content : [],
+      body: doc.body || doc.markdown || "",
       cloud: Boolean(doc.cloud),
     };
   },
@@ -222,6 +223,7 @@ window.EXPERIENCE_STORE = {
       title: item.title,
       category: item.category,
       summary: item.summary,
+      body: item.body || "",
       tags: item.tags || [],
       takeaways: item.takeaways || [],
       content: item.content || [],

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Harth的备忘录</title>
-    <link rel="stylesheet" href="styles.css?v=202605141605" />
+    <link rel="stylesheet" href="styles.css?v=202605141626" />
   </head>
   <body>
     <div class="app-shell">
@@ -115,6 +115,15 @@
           <textarea id="postSummaryInput" rows="5" placeholder="记录背景、问题、解决方法和注意事项" required></textarea>
         </label>
         <label>
+          正文内容
+          <textarea
+            id="postBodyInput"
+            class="body-editor"
+            rows="12"
+            placeholder="支持 Markdown，例如：&#10;&#10;## 背景&#10;这里写问题背景。&#10;&#10;## 排查过程&#10;- 先检查 include 路径&#10;- 再检查宏定义&#10;&#10;```c&#10;printf(&quot;debug&quot;);&#10;```"
+          ></textarea>
+        </label>
+        <label>
           整理要点
           <textarea id="postTakeawaysInput" rows="4" placeholder="每行一个要点，鼠标悬停帖子时会展开显示"></textarea>
         </label>
@@ -150,7 +159,7 @@
     </dialog>
 
     <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.5/cloudbase.full.js"></script>
-    <script src="data.js?v=202605141605"></script>
-    <script src="app.js?v=202605141605"></script>
+    <script src="data.js?v=202605141626"></script>
+    <script src="app.js?v=202605141626"></script>
   </body>
 </html>
